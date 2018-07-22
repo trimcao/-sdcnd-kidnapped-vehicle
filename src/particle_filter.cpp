@@ -80,7 +80,8 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 			double distance = dist(observations[i].x, observations[i].y, predicted[j].x, predicted[j].y);	
 			if (min_dist < distance) {
 				min_dist = distance;
-				observations[i].id = predicted[j].id;
+				// observations[i].id = predicted[j].id;
+				observations[i].id = j;
 			}
 		}	
 		// TODO: may need to check if the predicted landmark has already been used for another observation
@@ -89,7 +90,7 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], 
 		const std::vector<LandmarkObs> &observations, const Map &map_landmarks) {
-	// TODO: Update the weights of each particle using a mult-variate Gaussian distribution. You can read
+	// Update the weights of each particle using a mult-variate Gaussian distribution. You can read
 	//   more about this distribution here: https://en.wikipedia.org/wiki/Multivariate_normal_distribution
 	// NOTE: The observations are given in the VEHICLE'S coordinate system. Your particles are located
 	//   according to the MAP'S coordinate system. You will need to transform between the two systems.
@@ -132,11 +133,23 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 		dataAssociation(predicted, obs_in_map_coordinates);
 
 		// compute the weight of this particle
-
+		double weight = 1.0;
+		double std_x = std_landmark[0];
+		double std_y = std_landmark[1];
+		for (int i = 0; i < obs_in_map_coordinates.size(); i++) {
+			// assume that we use the index of predicted measurements list as id, not the id of actual landmark.
+			int meas_idx = obs_in_map_coordinates[i].id;	
+			double landmark_x = predicted[meas_idx].x;
+			double landmark_y = predicted[meas_idx].y;
+			double meas_x = obs_in_map_coordinates[i].x;
+			double meas_y = obs_in_map_coordinates[i].y;
+			double a = pow(meas_x - landmark_x, 2.0) / (2 * pow(std_x, 2.0));
+			double b = pow(meas_y - landmark_y, 2.0) / (2 * pow(std_y, 2.0));
+			double cur_weight = 1/(2*M_PI*std_x*std_y) * exp(-(a+b));
+			weight *= cur_weight;
+		}
+		particle.weight = weight;
 	}
-	
-
-
 }
 
 void ParticleFilter::resample() {
