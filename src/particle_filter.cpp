@@ -20,7 +20,7 @@
 using namespace std;
 
 void ParticleFilter::init(double x, double y, double theta, double std[]) {
-	// TODO: Set the number of particles. Initialize all particles to first position (based on estimates of 
+	// Set the number of particles. Initialize all particles to first position (based on estimates of 
 	//   x, y, theta and their uncertainties from GPS) and all weights to 1. 
 	// Add random Gaussian noise to each particle.
 	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
@@ -48,7 +48,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 }
 
 void ParticleFilter::prediction(double delta_t, double std_pos[], double velocity, double yaw_rate) {
-	// TODO: Add measurements to each particle and add random Gaussian noise.
+	// Add measurements to each particle and add random Gaussian noise.
 	// NOTE: When adding noise you may find std::normal_distribution and std::default_random_engine useful.
 	//  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
 	//  http://www.cplusplus.com/reference/random/default_random_engine/
@@ -70,11 +70,21 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 }
 
 void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::vector<LandmarkObs>& observations) {
-	// TODO: Find the predicted measurement that is closest to each observed measurement and assign the 
+	// Find the predicted measurement that is closest to each observed measurement and assign the 
 	//   observed measurement to this particular landmark.
 	// NOTE: this method will NOT be called by the grading code. But you will probably find it useful to 
 	//   implement this method and use it as a helper during the updateWeights phase.
-
+	for (int i = 0; i < observations.size(); i++) {
+		double min_dist = 999999999.9;
+		for (int j = 0; i < predicted.size(); j++) {
+			double distance = dist(observations[i].x, observations[i].y, predicted[j].x, predicted[j].y);	
+			if (min_dist < distance) {
+				min_dist = distance;
+				observations[i].id = predicted[j].id;
+			}
+		}	
+		// TODO: may need to check if the predicted landmark has already been used for another observation
+	}
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], 
@@ -89,6 +99,44 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	//   and the following is a good resource for the actual equation to implement (look at equation 
 	//   3.33
 	//   http://planning.cs.uiuc.edu/node99.html
+
+	// default_random_engine gen;	
+	// iterate through each particle
+	for (int i = 0; i < num_particles; i++) {
+		Particle particle = particles[i];
+		// generate a list of predicted measurements, it contains all the map landmarks within the sensor range.
+		std::vector<LandmarkObs> predicted;
+		for (int j = 0; j < map_landmarks.landmark_list.size(); j++) {
+			int landmark_id = map_landmarks.landmark_list[j].id_i;
+			float landmark_x = map_landmarks.landmark_list[j].x_f;
+			float landmark_y = map_landmarks.landmark_list[j].y_f;
+			double distance = dist(particle.x, particle.y, landmark_x, landmark_y);
+			if (distance <= sensor_range) {
+				LandmarkObs new_landmark;
+				new_landmark.x = landmark_x;
+				new_landmark.y = landmark_y;
+				new_landmark.id = landmark_id; 
+				predicted.push_back(new_landmark);
+			} 
+		}
+		// convert the observations from vehicle coordinates to map coordinates
+		std::vector<LandmarkObs> obs_in_map_coordinates;
+		for (int j = 0; j < observations.size(); j++) {
+			LandmarkObs current_obs = observations[j];
+			LandmarkObs converted_obs;
+			converted_obs.x = particle.x + (cos(particle.theta)*current_obs.x) - (sin(particle.theta)*current_obs.y);
+			converted_obs.y = particle.y + (sin(particle.theta)*current_obs.x) + (cos(particle.theta)*current_obs.y);
+			obs_in_map_coordinates.push_back(converted_obs);
+		}
+		// find the associations between predicted measurements and observed measurements
+		dataAssociation(predicted, obs_in_map_coordinates);
+
+		// compute the weight of this particle
+
+	}
+	
+
+
 }
 
 void ParticleFilter::resample() {
