@@ -28,8 +28,8 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	num_particles = 20;
 	// Create normal (Gaussian) distributions for x, y and theta.
 	normal_distribution<double> dist_x(x, std[0]);
-	normal_distribution<double> dist_y(x, std[1]);
-	normal_distribution<double> dist_theta(x, std[2]);
+	normal_distribution<double> dist_y(y, std[1]);
+	normal_distribution<double> dist_theta(theta, std[2]);
 	// initialize each particle
 	for (int i = 0; i < num_particles; i++) {
 		Particle new_particle;
@@ -56,10 +56,21 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 	std::cout << "PREDICTION" << std::endl;
 	default_random_engine gen;
 	for (int i = 0; i < num_particles; i++) {
-		double yaw_dt = yaw_rate * delta_t;
-		double new_x = particles[i].x + (velocity/yaw_rate) * ( sin(particles[i].theta + yaw_dt) - sin(particles[i].theta) );
-		double new_y = particles[i].y + (velocity/yaw_rate) * ( cos(particles[i].theta) - cos(particles[i].theta + yaw_dt) );
-		double new_theta = particles[i].theta + yaw_dt;
+		double new_x = 0.0;
+		double new_y = 0.0;
+		double new_theta = 0.0;
+		if (fabs(yaw_rate) > 1e-5) {
+			double yaw_dt = yaw_rate * delta_t;
+			new_x = particles[i].x + (velocity/yaw_rate) * ( sin(particles[i].theta + yaw_dt) - sin(particles[i].theta) );
+			new_y = particles[i].y + (velocity/yaw_rate) * ( cos(particles[i].theta) - cos(particles[i].theta + yaw_dt) );
+			new_theta = particles[i].theta + yaw_dt;
+		}
+		else {
+			double velocity_dt = velocity * delta_t;
+			new_x = particles[i].x + velocity_dt * cos(particles[i].theta);
+            new_y = particles[i].y + velocity_dt * sin(particles[i].theta);
+            new_theta = particles[i].theta;
+		}
 		// Create normal (Gaussian) distributions for x, y and theta.
 		normal_distribution<double> dist_x(new_x, std_pos[0]);
 		normal_distribution<double> dist_y(new_y, std_pos[1]);
