@@ -25,7 +25,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	// Add random Gaussian noise to each particle.
 	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
 	default_random_engine gen;
-	num_particles = 10;
+	num_particles = 20;
 	// Create normal (Gaussian) distributions for x, y and theta.
 	normal_distribution<double> dist_x(x, std[0]);
 	normal_distribution<double> dist_y(x, std[1]);
@@ -88,7 +88,7 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 				observations[i].id = j;
 			}
 		}	
-		std::cout << "min distance id: " << observations[i].id << std::endl;
+		// std::cout << "min distance id: " << observations[i].id << ". dist: " << min_dist << std::endl;
 		// TODO: may need to check if the predicted landmark has already been used for another observation
 	}
 }
@@ -110,9 +110,9 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	// iterate through each particle
 	for (int i = 0; i < num_particles; i++) {
 		Particle particle = particles[i];
-		std::cout << "PARTICLE " << i << std::endl;
-		std::cout << "x: " << particle.x << std::endl;
-		std::cout << "y: " << particle.y << std::endl;
+		// std::cout << "PARTICLE " << i << std::endl;
+		// std::cout << "x: " << particle.x << std::endl;
+		// std::cout << "y: " << particle.y << std::endl;
 		// generate a list of predicted measurements, it contains all the map landmarks within the sensor range.
 		std::vector<LandmarkObs> predicted;
 		for (int j = 0; j < map_landmarks.landmark_list.size(); j++) {
@@ -131,7 +131,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 			} 
 		}
 		// NOTE: we are converting landmarks from map coordinates to particle (car) coordinates
-		std::cout << "Size of Predicted landmarks: " << predicted.size() << std::endl;
+		// std::cout << "Size of Predicted landmarks: " << predicted.size() << std::endl;
 		std::vector<LandmarkObs> obs_in_map_coordinates;
 		// convert the observations from vehicle coordinates to map coordinates
 		for (int j = 0; j < observations.size(); j++) {
@@ -139,15 +139,19 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 			LandmarkObs converted_obs;
 			converted_obs.x = particle.x + (cos(particle.theta)*current_obs.x) - (sin(particle.theta)*current_obs.y);
 			converted_obs.y = particle.y + (sin(particle.theta)*current_obs.x) + (cos(particle.theta)*current_obs.y);
+			// converted_obs.x = -particle.x + (cos(-particle.theta)*current_obs.x) + (sin(-particle.theta)*current_obs.y);
+			// converted_obs.y = -particle.y - (sin(-particle.theta)*current_obs.x) + (cos(-particle.theta)*current_obs.y);
 			obs_in_map_coordinates.push_back(converted_obs);
 		}
+		/*
 		std::cout << "Size of observations: " << observations.size() << std::endl;
-		for (int j = 0; j < observations.size(); j++) {
+		for (int j = 0; j < obs_in_map_coordinates.size(); j++) {
 			std::cout << "observation " << j << ": " << observations[j].x << ", " << observations[j].y << std::endl;
 		}
 		for (int j = 0; j < predicted.size(); j++) {
 			std::cout << "predicted " << j << ": " << predicted[j].x << ", " << predicted[j].y << std::endl;
 		}
+		*/
 		// find the associations between predicted measurements and observed measurements
 		dataAssociation(predicted, obs_in_map_coordinates);
 		std::cout << "data association done" << std::endl;
@@ -166,8 +170,8 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 			double a = pow(meas_x - landmark_x, 2.0) / (2 * pow(std_x, 2.0));
 			double b = pow(meas_y - landmark_y, 2.0) / (2 * pow(std_y, 2.0));
 			double cur_weight = 1/(2*M_PI*std_x*std_y) * exp(-(a+b));
-			std::cout << "current weight: " << cur_weight << std::endl;
-			std::cout << "current total weight: " << weight << std::endl;
+			// std::cout << "current weight: " << cur_weight << std::endl;
+			// std::cout << "current total weight: " << weight << std::endl;
 			weight *= cur_weight;
 		}
 		particle.weight = weight;
@@ -185,12 +189,12 @@ void ParticleFilter::resample() {
 	std::vector<Particle> new_particles;
 	for (int i = 0; i < num_particles; i++) {
 		int new_idx = dist(gen);
-		particles[new_idx].weight = 1.0;
 		new_particles.push_back(particles[new_idx]);
 	}
 	particles = new_particles;
 	// re-init the weights to 1.0
 	for (int i = 0; i < num_particles; i++) {
+		particles[i].weight = 1.0;
 		weights[i] = 1.0;
 	}
 }
